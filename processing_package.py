@@ -140,7 +140,7 @@ def processing_subrecord(rids, data_for_db):
                 pr_EGTS_TELEDATA_SERVICE(srds, data_for_db)
 
                 # Запись данных в бд тут должна быть.
-                data_for_db.pr_all()
+                data_for_db.gts_put()
                 # Очищаем список значений llsd.
                 data_for_db.reset_llsd()
 
