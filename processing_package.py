@@ -128,19 +128,21 @@ def processing_EGTS_PT_SIGNED_APPDATA(byte_string, data_for_db):
 
 # Процедура обработки подзаписей.
 def processing_subrecord(rids, data_for_db):
-    for rid in rids.keys():
+    all_srds_srd = dict()
+    for rid in rids:
         dict_rid = copy.deepcopy(rids[rid])
+        # dict_rid = rids[rid]
         srds = dict_rid["RD"]
 
         match hex_to_dec(dict_rid["RST"]):
             case Types_services.EGTS_AUTH_SERVICE.value:
-                pr_EGTS_AUTH_SERVICE(srds, data_for_db)
+                all_srds_srd = pr_EGTS_AUTH_SERVICE(srds, data_for_db)
 
             case Types_services.EGTS_TELEDATA_SERVICE.value:
-                pr_EGTS_TELEDATA_SERVICE(srds, data_for_db)
+                all_srds_srd = pr_EGTS_TELEDATA_SERVICE(srds, data_for_db)
 
                 # Запись данных в бд тут должна быть.
-                data_for_db.gts_put()
+                # data_for_db.gts_put()
                 # Очищаем список значений llsd.
                 data_for_db.reset_llsd()
 
@@ -155,6 +157,12 @@ def processing_subrecord(rids, data_for_db):
 
             case _:
                 print("Неизвестный тип сервиса-получателя.")
+
+    for rid in rids:
+        for srd in all_srds_srd:
+            rids[rid]["RD"][srd]["SRD"] = all_srds_srd[srd]["SRD"]
+
+    return rids
 
 
 # Функция обработки данных пакета.
@@ -193,11 +201,11 @@ def package_data_processing(packet, data_for_db):
 
                                     case Sfrd_types.EGTS_PT_APPDATA.value:
                                         dict_data["SFRD"] = processing_EGTS_PT_APPDATA(dict_data["SFRD"], data_for_db)
-                                        processing_subrecord(dict_data["SFRD"], data_for_db)
+                                        dict_data["SFRD"] = processing_subrecord(dict_data["SFRD"], data_for_db)
 
                                     case Sfrd_types.EGTS_PT_SIGNED_APPDATA.value:
                                         dict_data["SFRD"] = processing_EGTS_PT_SIGNED_APPDATA(dict_data["SFRD"], data_for_db)
-                                        processing_subrecord(dict_data["SFRD"], data_for_db)
+                                        dict_data["SFRD"] = processing_subrecord(dict_data["SFRD"], data_for_db)
 
                                     case _:
                                         print("Неизвестный тип пакета.")

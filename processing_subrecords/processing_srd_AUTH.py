@@ -4,8 +4,10 @@ from lists.types_subrecords import Tsr_EGTS_AUTH_SERVICE
 
 # Обработки подзаписей сервиса.
 def pr_EGTS_AUTH_SERVICE(srds, data_for_db):
+    all_srds_srd = {}
     for srd in srds:
         dict_srd = srds[srd]
+        all_srds_srd[srd] = {"SRD": {}}
         data_srd = {}
 
         match hex_to_dec(dict_srd["SRT"]):
@@ -112,5 +114,6 @@ def pr_EGTS_AUTH_SERVICE(srds, data_for_db):
                 # dict_srd["SRD"], data_srd["RCD"] = param_byte(dict_srd["SRD"], 1, False)
                 pass
 
-    print()
+        all_srds_srd[srd]["SRD"] = data_srd
 
+    return all_srds_srd

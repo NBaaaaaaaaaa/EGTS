@@ -4,8 +4,10 @@ from lists.types_subrecords import Tsr_EGTS_TELEDATA_SERVICE
 
 # Обработки подзаписей сервиса.
 def pr_EGTS_TELEDATA_SERVICE(srds, data_for_db):
+    all_srds_srd = {}
     for srd in srds:
         dict_srd = srds[srd]
+        all_srds_srd[srd] = {"SRD": {}}
         data_srd = {}
 
         match hex_to_dec(dict_srd["SRT"]):
@@ -171,4 +173,6 @@ def pr_EGTS_TELEDATA_SERVICE(srds, data_for_db):
             case Tsr_EGTS_TELEDATA_SERVICE.EGTS_SR_PASSENGERS_COUNTERS.value:
                 pass
 
-    print()
+        all_srds_srd[srd]["SRD"] = data_srd
+
+    return all_srds_srd
