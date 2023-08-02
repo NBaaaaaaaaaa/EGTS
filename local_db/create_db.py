@@ -1,13 +1,13 @@
-import mysql.connector
-from config import host, user, password, db_name, table_name
+import sqlite3
+from l_config import l_db_name, table_name
 
 
 # Процедура создания таблицы.
 def create_table(cursor):
     try:
         create_table_query = f'''
-            CREATE TABLE IF NOT EXISTS {db_name}. {table_name} (
-              `id` INT NOT NULL AUTO_INCREMENT,
+            CREATE TABLE IF NOT EXISTS {table_name} (
+              `id` INTEGER PRIMARY KEY AUTOINCREMENT,
               `imei` BIGINT(20) NOT NULL,
               `terminal_id` INT(6) NOT NULL,
               `rec_id` INT(6) NOT NULL,
@@ -27,10 +27,7 @@ def create_table(cursor):
               `fuel_level_2` INT(6) NOT NULL,
               `fuel_level_3` INT(6) NOT NULL,
               `fuel_level_4` INT(6) NOT NULL,
-              `sensors` VARCHAR(500) NOT NULL,
-              PRIMARY KEY (`id`))
-            ENGINE = InnoDB;
-            '''
+              `sensors` VARCHAR(500) NOT NULL)'''
 
         cursor.execute(create_table_query)
 
@@ -38,30 +35,14 @@ def create_table(cursor):
         print(e)
 
 
-# Процедура создания бд.
-def create_db(cursor):
-    try:
-        cursor.execute(f"CREATE DATABASE {db_name}")
-
-    except Exception as e:
-        print(e)
-
-
 if __name__ == "__main__":
-    # Подключаемся к серверу.
-    db_connection = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password
-    )
+    # Подключение к существующей базе данных или создание новой, если её нет.
+    connection = sqlite3.connect(f'{l_db_name}.db')
 
-    # Создаем курсор.
-    cursor = db_connection.cursor()
+    cursor = connection.cursor()
 
-    # Создаем бд и таблицу.
-    create_db(cursor)
+    # Создаем таблицу в бд.
     create_table(cursor)
 
-    # Закрываем курсор и соединение.
     cursor.close()
-    db_connection.close()
+    connection.close()

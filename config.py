@@ -1,5 +1,0 @@
-host = ""
-user = ""
-password = ""
-db_name = "egts_db"
-table_name = "egts_data"
