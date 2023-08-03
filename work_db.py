@@ -6,6 +6,9 @@ from datetime import datetime
 from main_db.m_config import host, user, password, db_name, table_name
 from local_db.l_config import l_db_name, table_name  # Можно не импортировать table_name, так как они одинаковы.
 
+from logger_files.type_text import Types_text
+from logger_files.logger import Logging
+
 
 # Функция подключения к локальной бд.
 def connect_local_db():
@@ -29,6 +32,8 @@ def connect_main_db():
 
     except Exception as e:
         print(e)
+        Logging("").logging(fromm=2, to=3, type_text=Types_text.ERROR.value,
+                              text=f"Ошибка подключения к серверу с бд. {e}")
         return {"main": False, "connection": connect_local_db()}
 
 

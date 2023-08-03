@@ -11,6 +11,8 @@ from lists.types_services import Types_services
 from processing_subrecords.processing_srd_AUTH import pr_EGTS_AUTH_SERVICE
 from processing_subrecords.processing_srd_TELEDATA import pr_EGTS_TELEDATA_SERVICE
 
+from logger_files.type_text import Types_text
+
 
 # Функция получения данных пакета.
 def get_package_data(packet):
@@ -48,9 +50,21 @@ def get_package_data(packet):
 
 
 # Функция обработки поля SFRD для подтверждения пакета Транспортного Уровня.
-def processing_EGTS_PT_RESPONSE(byte_string):
-    # А это вообще не надо вроде. А не. При отправке на другую ТП надо будет сформировать пакет TTL-1 hcs перерасчет
-    pass
+def processing_EGTS_PT_RESPONSE(byte_string, data_for_db):
+    dict_data_sfrd = {}
+
+    i = 0
+    while len(byte_string) > 0:
+        try:
+            byte_string, dict_data_sfrd["RPID"] = param_byte(byte_string, 2, True)
+            byte_string, dict_data_sfrd["PR"] = param_byte(byte_string, 1, False)
+
+            dict_data_sfrd.update(processing_EGTS_PT_APPDATA(byte_string, data_for_db, dict_data_sfrd))
+
+            return dict_data_sfrd
+
+        except Exception as e:
+            print(e)
 
 
 # Функция обработки поля SFRD для пакета содержащего данные ППУ.
@@ -131,7 +145,6 @@ def processing_subrecord(rids, data_for_db):
     all_srds_srd = dict()
     for rid in rids:
         dict_rid = copy.deepcopy(rids[rid])
-        # dict_rid = rids[rid]
         srds = dict_rid["RD"]
 
         match hex_to_dec(dict_rid["RST"]):
@@ -141,8 +154,8 @@ def processing_subrecord(rids, data_for_db):
             case Types_services.EGTS_TELEDATA_SERVICE.value:
                 all_srds_srd = pr_EGTS_TELEDATA_SERVICE(srds, data_for_db)
 
-                # Запись данных в бд тут должна быть.
-                # data_for_db.gts_put()
+                # Запись данных в бд.
+                data_for_db.gts_put()
                 # Очищаем список значений llsd.
                 data_for_db.reset_llsd()
 
@@ -166,7 +179,7 @@ def processing_subrecord(rids, data_for_db):
 
 
 # Функция обработки данных пакета.
-def package_data_processing(packet, data_for_db):
+def package_data_processing(packet, data_for_db, logging):
     dict_data = get_package_data(packet)
     send_dict_data = dict_data.copy()
 
@@ -195,7 +208,9 @@ def package_data_processing(packet, data_for_db):
                                 match hex_to_dec(dict_data["PT"]):
                                     case Sfrd_types.EGTS_PT_RESPONSE.value:
                                         print("EGTS_PT_RESPONSE")
-                                        print(f'Код ответа на сообщение - {hex_to_dec(dict_data["SFRD"][2:3])}')
+                                        # эта часть кода не тестилась
+                                        dict_data["SFRD"] = processing_EGTS_PT_RESPONSE(dict_data["SFRD"], data_for_db)
+                                        dict_data["SFRD"] = processing_subrecord(dict_data["SFRD"], data_for_db)
                                         # хз надо или нет, но кода я участвую в цепи пересылок пакета, то будто бы надо
                                         # я получу ответ от пересылки, и ответ направлю, кто мне скинул пакет
 
@@ -204,12 +219,15 @@ def package_data_processing(packet, data_for_db):
                                         dict_data["SFRD"] = processing_subrecord(dict_data["SFRD"], data_for_db)
 
                                     case Sfrd_types.EGTS_PT_SIGNED_APPDATA.value:
-                                        dict_data["SFRD"] = processing_EGTS_PT_SIGNED_APPDATA(dict_data["SFRD"], data_for_db)
+                                        dict_data["SFRD"] = processing_EGTS_PT_SIGNED_APPDATA(dict_data["SFRD"],
+                                                                                              data_for_db)
                                         dict_data["SFRD"] = processing_subrecord(dict_data["SFRD"], data_for_db)
 
                                     case _:
                                         print("Неизвестный тип пакета.")
 
+                                logging.logging(fromm=1, to=2, type_text=Types_text.PROCESSED_SUCCESSFULLY.value,
+                                                text=dict_data)
                                 return create_response_package(send_dict_data, Sfrd_types.EGTS_PT_RESPONSE.value,
                                                                Codes.EGTS_PC_OK.value)
 
