@@ -1,3 +1,5 @@
+import time
+
 import mysql.connector
 import sqlite3
 
@@ -8,6 +10,8 @@ from local_db.l_config import l_db_name, table_name  # Можно не импо�
 
 from logger_files.type_text import Types_text
 from logger_files.logger import Logging
+
+from threading import Thread
 
 
 # Функция подключения к локальной бд.
@@ -33,7 +37,7 @@ def connect_main_db():
     except Exception as e:
         print(e)
         Logging("").logging(fromm=2, to=3, type_text=Types_text.ERROR.value,
-                              text=f"Ошибка подключения к серверу с бд. {e}")
+                            text=f"Ошибка подключения к серверу с бд. {e}")
         return {"main": False, "connection": connect_local_db()}
 
 
@@ -43,13 +47,30 @@ def create_cursor(db_connection):
     Packet_data.cursor = Packet_data.db_connection.cursor()
 
 
+# Процедура проверки доступа к серверу с бд.
+def check_connect(always):
+    while True:
+        # Создаем подключение к бд.
+        create_cursor(connect_main_db())
+
+        if always:
+            time.sleep(60)
+
+
+# Процедура создания потока проверки доступа к серверу с бд.
+def create_check_connect():
+    # Создаем новый поток для обработки данных клиента
+    t = Thread(target=check_connect, args=(True, ))
+    t.start()
+
+
 class Packet_data:
     tid = oid = evid = tm = lat = long = spd = dir = alt = vld = bb = src = 0
     imei = coords = sensors = ''
     llsd = []
 
     # Статические переменные.
-    is_main = db_connection = cursor = None
+    is_main = db_connection = cursor = in_local = None
 
     def update_auth(self, tid, imei):
         self.tid = tid
@@ -136,35 +157,15 @@ class Packet_data:
 
         # Запись в основную бд.
         if Packet_data.is_main:
-            # Если соединение было разорвано.
-            if not self.insert_data():
-                # Проверка наличия подключения к основной бд. Если нет, то запись в локальную бд.
-                connect = connect_main_db()
-                # Изменяем статические поля.
-                create_cursor(connect)
+            # Если были записаны данные в локальную бд.
+            if Packet_data.in_local:
+                local_connection = connect_local_db()
+                local_cursor = local_connection.cursor()
 
-                self.insert_data()
-
-        # Запись в локальную бд.
-        else:
-            self.insert_data()
-
-            # Проверка наличия подключения к основной бд.
-            connect = connect_main_db()
-            # Запись из локальной бд в основную.
-            if connect["main"]:
-                # Выполнение запроса SELECT
-                Packet_data.cursor.execute(f'SELECT * FROM {table_name}')
+                local_cursor.execute(f'SELECT * FROM {table_name}')
 
                 # Получение всех строк результата в виде списка кортежей.
-                rows = Packet_data.cursor.fetchall()
-
-                # Сохраняем соединения с локальной бд для последующего удаления записей.
-                local_cursor = Packet_data.cursor
-                local_connection = Packet_data.db_connection
-
-                # Изменяем статические поля.
-                create_cursor(connect)
+                rows = local_cursor.fetchall()
 
                 # Запись всех строк из локальной бд в основную.
                 for row in [list(row) for row in rows]:
@@ -174,6 +175,21 @@ class Packet_data:
                         local_cursor.execute(f'DELETE FROM {table_name} WHERE id = {row[0]}')
                         local_connection.commit()
 
+                local_cursor.execute(f'SELECT * FROM {table_name}')
+                if len(local_cursor.fetchall()) > 0:
+                    Packet_data.in_local = False
+
                 # Закрываем соединение с локальной бд.
                 local_cursor.close()
                 local_connection.close()
+
+            # Если соединение было разорвано.
+            if not self.insert_data():
+                check_connect(False)
+
+                self.insert_data()
+
+        # Запись в локальную бд.
+        else:
+            self.insert_data()
+            Packet_data.in_local = True
