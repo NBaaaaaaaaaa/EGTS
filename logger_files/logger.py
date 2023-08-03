@@ -13,7 +13,7 @@ def create_directory():
 
 # Процедура создания директорий под логи.
 def create_directories():
-    log_file = "{file}-{num}.txt"
+    log_file = "{file}.{num}.txt"
     # Получение текущей даты.
     current_datetime = datetime.now()
     path = "logger_files/logs/{y}/{m}/{d}/".format(y=current_datetime.year, m=current_datetime.month, d=current_datetime.day)

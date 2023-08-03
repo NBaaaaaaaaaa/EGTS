@@ -109,9 +109,10 @@ if __name__ == "__main__":
     packet = package_data_processing(a[0], data_for_db, logging)
     logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
 
-    logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=b[0])
-    packet = package_data_processing(b[0], data_for_db, logging)
-    logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
+    while True:
+        logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=b[0])
+        packet = package_data_processing(b[0], data_for_db, logging)
+        logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
 
     Packet_data.db_connection.close()
 

@@ -17,7 +17,7 @@ from threading import Thread
 # Функция подключения к локальной бд.
 def connect_local_db():
     # Подключение к существующей базе данных или создание новой, если её нет.
-    connection = sqlite3.connect(f'local_db/{l_db_name}.db')
+    connection = sqlite3.connect(f'local_db/{l_db_name}.db', check_same_thread=False)
     return connection
 
 
@@ -53,14 +53,16 @@ def check_connect(always):
         # Создаем подключение к бд.
         create_cursor(connect_main_db())
 
-        if always:
-            time.sleep(60)
+        if not always:
+            break
+
+        time.sleep(5)
 
 
 # Процедура создания потока проверки доступа к серверу с бд.
 def create_check_connect():
     # Создаем новый поток для обработки данных клиента
-    t = Thread(target=check_connect, args=(True, ))
+    t = Thread(target=check_connect, daemon=True, args=(True, ))
     t.start()
 
 
@@ -143,8 +145,8 @@ class Packet_data:
 
         except Exception as e:
             print(e)
-            Packet_data.cursor.close()
-            Packet_data.db_connection.close()
+            # Packet_data.cursor.close()
+            # Packet_data.db_connection.close()
             return False
 
     def gts_put(self):
@@ -157,39 +159,44 @@ class Packet_data:
 
         # Запись в основную бд.
         if Packet_data.is_main:
-            # Если были записаны данные в локальную бд.
-            if Packet_data.in_local:
-                local_connection = connect_local_db()
-                local_cursor = local_connection.cursor()
-
-                local_cursor.execute(f'SELECT * FROM {table_name}')
-
-                # Получение всех строк результата в виде списка кортежей.
-                rows = local_cursor.fetchall()
-
-                # Запись всех строк из локальной бд в основную.
-                for row in [list(row) for row in rows]:
-                    # Если записалось в основную бд.
-                    if self.insert_data(row[1:]):
-                        # Удаляем запись из локальной бд.
-                        local_cursor.execute(f'DELETE FROM {table_name} WHERE id = {row[0]}')
-                        local_connection.commit()
-
-                local_cursor.execute(f'SELECT * FROM {table_name}')
-                if len(local_cursor.fetchall()) > 0:
-                    Packet_data.in_local = False
-
-                # Закрываем соединение с локальной бд.
-                local_cursor.close()
-                local_connection.close()
-
+            main_connect = True
             # Если соединение было разорвано.
             if not self.insert_data():
                 check_connect(False)
-
+                print("11111111111111111")
                 self.insert_data()
+                print("222222222222222222")
+                main_connect = False
+
+            if main_connect:
+                # Если были записаны данные в локальную бд.
+                if Packet_data.in_local and Packet_data.is_main:
+                    local_connection = connect_local_db()
+                    local_cursor = local_connection.cursor()
+
+                    local_cursor.execute(f'SELECT * FROM {table_name}')
+
+                    # Получение всех строк результата в виде списка кортежей.
+                    rows = local_cursor.fetchall()
+
+                    # Запись всех строк из локальной бд в основную.
+                    for row in [list(row) for row in rows]:
+                        # Если записалось в основную бд.
+                        if self.insert_data(row[1:]):
+                            # Удаляем запись из локальной бд.
+                            local_cursor.execute(f'DELETE FROM {table_name} WHERE id = {row[0]}')
+                            local_connection.commit()
+
+                    local_cursor.execute(f'SELECT * FROM {table_name}')
+                    if len(local_cursor.fetchall()) > 0:
+                        Packet_data.in_local = False
+
+                    # Закрываем соединение с локальной бд.
+                    local_cursor.close()
+                    local_connection.close()
 
         # Запись в локальную бд.
         else:
+            print("3333333333333333333333333")
             self.insert_data()
             Packet_data.in_local = True
