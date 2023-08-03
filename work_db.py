@@ -162,7 +162,7 @@ class Packet_data:
             main_connect = True
             # Если соединение было разорвано.
             if not self.insert_data():
-                check_connect(False)
+                create_cursor({"main": False, "connection": connect_local_db()})
                 print("11111111111111111")
                 self.insert_data()
                 print("222222222222222222")
