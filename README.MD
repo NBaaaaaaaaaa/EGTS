@@ -29,6 +29,9 @@ table_name = "egts_data"
 Запустить файл *local_db/create_db.py*.
 
 ## Шаг 4
+Запустить файл *logger_files/logger.py*.
+
+## Шаг 5
 Запустить файл *egts.py*.
 
 
