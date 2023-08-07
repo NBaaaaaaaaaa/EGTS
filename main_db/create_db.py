@@ -1,5 +1,5 @@
 import mysql.connector
-from main_db.m_config import host, user, password, db_name, table_name
+from config import host, user, password, db_name, table_name
 
 
 # Процедура создания таблицы.

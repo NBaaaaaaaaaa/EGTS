@@ -207,7 +207,7 @@ def package_data_processing(packet, data_for_db, logging):
                                 # Обрабатываем информацию уровня поддержки в зависимости от значения PT.
                                 match hex_to_dec(dict_data["PT"]):
                                     case Sfrd_types.EGTS_PT_RESPONSE.value:
-                                        print("EGTS_PT_RESPONSE")
+                                        # print("EGTS_PT_RESPONSE")
                                         # эта часть кода не тестилась
                                         dict_data["SFRD"] = processing_EGTS_PT_RESPONSE(dict_data["SFRD"], data_for_db)
                                         dict_data["SFRD"] = processing_subrecord(dict_data["SFRD"], data_for_db)

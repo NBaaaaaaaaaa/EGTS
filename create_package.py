@@ -50,5 +50,5 @@ def create_response_package(dict_data, package_type, code):
         case _:
             print("Неизвестный тип пакета.")
 
-    print(f"Пакет на отправку: {send_package}\n")
+    # print(f"Пакет на отправку: {send_package}\n")
     return send_package

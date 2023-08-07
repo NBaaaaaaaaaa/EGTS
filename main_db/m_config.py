@@ -1,5 +1,0 @@
-host = "localhost"
-user = "NIMB"
-password = "root"
-db_name = "egts_db"
-table_name = "egts_data"

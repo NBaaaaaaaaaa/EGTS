@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from config import logs_path
 
 
 # Процедура создания папки для хранения логов.
@@ -16,7 +17,7 @@ def create_directories():
     log_file = "{file}.{num}.txt"
     # Получение текущей даты.
     current_datetime = datetime.now()
-    path = "logger_files/logs/{y}/{m}/{d}/".format(y=current_datetime.year, m=current_datetime.month, d=current_datetime.day)
+    path = f"{logs_path}/{current_datetime.year}/{current_datetime.month}/{current_datetime.day}/"
     # Создание директорий.
     os.makedirs(path, exist_ok=True)
 

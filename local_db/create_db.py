@@ -1,5 +1,5 @@
 import sqlite3
-from l_config import l_db_name, table_name
+from config import l_db_name, table_name
 
 
 # Процедура создания таблицы.

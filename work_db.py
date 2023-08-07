@@ -5,8 +5,7 @@ import sqlite3
 
 from datetime import datetime
 
-from main_db.m_config import host, user, password, db_name, table_name
-from local_db.l_config import l_db_name, table_name  # Можно не импортировать table_name, так как они одинаковы.
+from config import host, user, password, db_name, l_db_name, table_name, time_sleep
 
 from logger_files.type_text import Types_text
 from logger_files.logger import Logging
@@ -41,6 +40,7 @@ def connect_main_db():
         return {"main": False, "connection": connect_local_db()}
 
 
+# Процедура изменения статических полей класса.
 def create_cursor(db_connection):
     Packet_data.is_main = db_connection["main"]
     Packet_data.db_connection = db_connection["connection"]
@@ -50,13 +50,16 @@ def create_cursor(db_connection):
 # Процедура проверки доступа к серверу с бд.
 def check_connect(always):
     while True:
-        # Создаем подключение к бд.
-        create_cursor(connect_main_db())
-
         if not always:
+            # Создаем подключение к бд. Если подключение к удаленной бд было разорвано.
+            create_cursor(connect_main_db())
             break
 
-        time.sleep(5)
+        if not Packet_data.is_main:
+            # Создаем подключение к бд. Если идет запись в локальную бд.
+            create_cursor(connect_main_db())
+
+        time.sleep(time_sleep)
 
 
 # Процедура создания потока проверки доступа к серверу с бд.
@@ -116,6 +119,7 @@ class Packet_data:
     def reset_llsd(self):
         self.llsd = []
 
+    # Метод записи данных в бд.
     def insert_data(self, data=None):
         try:
             type_placeholder = {
@@ -131,10 +135,13 @@ class Packet_data:
             VALUES ({type_placeholder[Packet_data.is_main]})
             '''
 
+            # Вставка в бд.
             if not data:
                 insert_data = (self.imei, self.tid, self.oid, self.evid, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                                self.tm, self.lat, self.long, self.coords, self.spd, self.dir, self.alt, self.vld,
                                self.bb, self.src, self.llsd[0], self.llsd[1], self.llsd[2], self.llsd[3], self.sensors)
+
+            # Вставка в удаленную бд с локальной бд.
             else:
                 insert_data = data
 
@@ -149,6 +156,7 @@ class Packet_data:
             # Packet_data.db_connection.close()
             return False
 
+    # Метод вставки данных в бд.
     def gts_put(self):
         # Если колво значений меньше 4, то заполняем -1.
         while len(self.llsd) < 4:
@@ -157,15 +165,13 @@ class Packet_data:
         # пока так, надо потом будет удалить и добавить изменение этого значения.
         self.sensors = "12341qwerqwfdasf"
 
-        # Запись в основную бд.
+        # Запись в удаленную бд.
         if Packet_data.is_main:
             main_connect = True
             # Если соединение было разорвано.
             if not self.insert_data():
                 create_cursor({"main": False, "connection": connect_local_db()})
-                print("11111111111111111")
                 self.insert_data()
-                print("222222222222222222")
                 main_connect = False
 
             if main_connect:
@@ -179,7 +185,7 @@ class Packet_data:
                     # Получение всех строк результата в виде списка кортежей.
                     rows = local_cursor.fetchall()
 
-                    # Запись всех строк из локальной бд в основную.
+                    # Запись всех строк из локальной бд в удаленную.
                     for row in [list(row) for row in rows]:
                         # Если записалось в основную бд.
                         if self.insert_data(row[1:]):
@@ -197,6 +203,5 @@ class Packet_data:
 
         # Запись в локальную бд.
         else:
-            print("3333333333333333333333333")
             self.insert_data()
             Packet_data.in_local = True
