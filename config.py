@@ -18,5 +18,9 @@ time_sleep = 5
 # Path logs
 logs_path = "logger_files/logs"
 
+# ----------------------- threads ------------------------
+queue_length = 1
+devices_count = 5
+
 
 

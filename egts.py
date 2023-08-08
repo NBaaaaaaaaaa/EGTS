@@ -7,9 +7,13 @@ from work_db import connect_main_db, create_cursor, Packet_data, create_check_co
 from logger_files.logger import Logging
 from logger_files.type_text import Types_text
 
+from config import queue_length, devices_count
+
 
 # Процедура получения и отправки пакетов.
 def receive_data(connection, data_for_db, logging):
+    Packet_data.increment()
+
     try:
         while True:
             # Получаем данные от клиента
@@ -29,6 +33,7 @@ def receive_data(connection, data_for_db, logging):
         pass
 
     logging.logging(fromm=1, to=2, type_text=Types_text.DISCONNECTED.value)
+    Packet_data.decrement()
     # Закрываем соединение.
     connection.close()
 
@@ -47,25 +52,26 @@ def server_work():
     # Создаем сокет для прослушивания порта
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('', port))
-    server_socket.listen(1)
+    server_socket.listen(queue_length)
 
     print("Сервер запущен и слушает порт {}...".format(port))
 
     try:
         while True:
-            # Принимаем входящее соединение
-            connection, address = server_socket.accept()
-            print("Установлено соединение с {}".format(address))
+            if Packet_data.get_count() < devices_count:
+                # Принимаем входящее соединение
+                connection, address = server_socket.accept()
+                print("Установлено соединение с {}".format(address))
 
-            # Создаем объект класса, для последующей записи данных в бд.
-            data_for_db = Packet_data()
+                # Создаем объект класса, для последующей записи данных в бд.
+                data_for_db = Packet_data()
 
-            logging = Logging(address)
-            logging.logging(fromm=1, to=2, type_text=Types_text.CONNECTED.value)
+                logging = Logging(address)
+                logging.logging(fromm=1, to=2, type_text=Types_text.CONNECTED.value)
 
-            # Создаем новый поток для обработки данных клиента
-            t = Thread(target=receive_data, args=(connection, data_for_db, logging))
-            t.start()
+                # Создаем новый поток для обработки данных клиента
+                t = Thread(target=receive_data, args=(connection, data_for_db, logging))
+                t.start()
 
     except KeyboardInterrupt:
         pass

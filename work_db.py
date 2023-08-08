@@ -76,6 +76,19 @@ class Packet_data:
 
     # Статические переменные.
     is_main = db_connection = cursor = in_local = None
+    _count = 0
+
+    @classmethod
+    def increment(cls):
+        cls._count += 1
+
+    @classmethod
+    def decrement(cls):
+        cls._count -= 1
+
+    @classmethod
+    def get_count(cls):
+        return cls._count
 
     def update_auth(self, tid, imei):
         self.tid = tid
