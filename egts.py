@@ -1,3 +1,4 @@
+import multiprocessing
 import socket
 from processing_package import package_data_processing
 from threading import Thread
@@ -12,8 +13,6 @@ from config import queue_length, devices_count
 
 # Процедура получения и отправки пакетов.
 def receive_data(connection, data_for_db, logging):
-    Packet_data.increment()
-
     try:
         while True:
             # Получаем данные от клиента
@@ -33,9 +32,28 @@ def receive_data(connection, data_for_db, logging):
         pass
 
     logging.logging(fromm=1, to=2, type_text=Types_text.DISCONNECTED.value)
-    Packet_data.decrement()
     # Закрываем соединение.
     connection.close()
+
+
+# Процедура работы процесса.
+def process_work(server_socket):
+    for i in range(devices_count):
+        # Принимаем входящее соединение
+        connection, address = server_socket.accept()
+        print("Установлено соединение с {}".format(address))
+
+        # Создаем объект класса, для последующей записи данных в бд.
+        data_for_db = Packet_data()
+
+        logging = Logging(address)
+        logging.logging(fromm=1, to=2, type_text=Types_text.CONNECTED.value)
+
+        # Создаем новый поток для обработки данных клиента
+        t = Thread(target=receive_data, args=(connection, data_for_db, logging))
+        t.start()
+
+    return True
 
 
 # Процедура работы сервера.
@@ -56,26 +74,23 @@ def server_work():
 
     print("Сервер запущен и слушает порт {}...".format(port))
 
+    # Создаем пул процессов без указания количества процессов
+    pool = multiprocessing.Pool()
+    is_create_proc = True
+
     try:
         while True:
-            if Packet_data.get_count() < devices_count:
-                # Принимаем входящее соединение
-                connection, address = server_socket.accept()
-                print("Установлено соединение с {}".format(address))
+            if is_create_proc:
+                is_create_proc = False
 
-                # Создаем объект класса, для последующей записи данных в бд.
-                data_for_db = Packet_data()
-
-                logging = Logging(address)
-                logging.logging(fromm=1, to=2, type_text=Types_text.CONNECTED.value)
-
-                # Создаем новый поток для обработки данных клиента
-                t = Thread(target=receive_data, args=(connection, data_for_db, logging))
-                t.start()
+                is_create_proc = pool.apply_async(process_work, args=(server_socket,))
 
     except KeyboardInterrupt:
         pass
 
+    # Завершаем пул процессов
+    pool.close()
+    pool.join()
     # Закрываем соединение с бд.
     Packet_data.db_connection.close()
     # Закрываем сокет.
