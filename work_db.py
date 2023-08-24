@@ -5,7 +5,7 @@ import sqlite3
 
 from datetime import datetime
 
-from config import host, user, password, db_name, l_db_name, table_name, time_sleep
+from config import host, port, user, password, db_name, l_db_name, table_name, time_sleep
 
 from logger_files.type_text import Types_text
 from logger_files.logger import Logging
@@ -26,9 +26,11 @@ def connect_main_db():
         # Подключаемся к бд.
         connection = mysql.connector.connect(
             host=host,
+            port=port,
             user=user,
             password=password,
-            database=db_name
+            database=db_name,
+            ssl_disabled=True
         )
 
         return {"main": True, "connection": connection}
@@ -77,6 +79,20 @@ class Packet_data:
     # Статические переменные.
     is_main = db_connection = cursor = in_local = None
 
+    _count = 0
+
+    @classmethod
+    def increment(cls):
+        cls._count += 1
+
+    @classmethod
+    def decrement(cls):
+        cls._count -= 1
+
+    @classmethod
+    def get_count(cls):
+        return cls._count
+
     def update_auth(self, tid, imei):
         self.tid = tid
         self.imei = imei
@@ -119,8 +135,7 @@ class Packet_data:
     def reset_llsd(self):
         self.llsd = []
 
-    # Метод записи данных в бд.
-    def insert_data(self, data=None):
+    def insert_sqlite3(self, insert_data):
         try:
             type_placeholder = {
                 True: "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
@@ -128,32 +143,81 @@ class Packet_data:
             }
 
             insert_query = f'''
-            INSERT INTO {table_name} 
-              (imei, terminal_id, rec_id, event_id, time_recv, 
-              time_event, lat, lon, coords_sign, speed, vector, height, is_valid, 
-              is_blackbox, point_source, fuel_level_1, fuel_level_2, fuel_level_3, fuel_level_4, sensors) 
+            INSERT INTO {table_name}
+              (imei, terminal_id, rec_id, event_id, time_recv,
+              time_event, lat, lon, coords_sign, speed, vector, height, is_valid,
+              is_blackbox, point_source, fuel_level_1, fuel_level_2, fuel_level_3, fuel_level_4, sensors)
             VALUES ({type_placeholder[Packet_data.is_main]})
             '''
 
+            Packet_data.cursor.execute(insert_query, insert_data)
+            Packet_data.db_connection.commit()
+
+        except Exception as e:
+            print(e)
+
+    # Метод записи данных в бд.
+    def insert_data(self, data=None):
+        # try:
             # Вставка в бд.
             if not data:
-                insert_data = (self.imei, self.tid, self.oid, self.evid, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                insert_data = [self.imei, self.tid, self.oid, self.evid, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                                self.tm, self.lat, self.long, self.coords, self.spd, self.dir, self.alt, self.vld,
-                               self.bb, self.src, self.llsd[0], self.llsd[1], self.llsd[2], self.llsd[3], self.sensors)
+                               self.bb, self.src, self.llsd[0], self.llsd[1], self.llsd[2], self.llsd[3], self.sensors]
 
             # Вставка в удаленную бд с локальной бд.
             else:
                 insert_data = data
 
-            Packet_data.cursor.execute(insert_query, insert_data)
-            Packet_data.db_connection.commit()
+            if Packet_data.is_main:
+                # query = f'''CALL gts_put({insert_data[0]}, {insert_data[1]}, {insert_data[2]}, {insert_data[3]}, '{insert_data[4]}', {insert_data[5]}, {insert_data[6]}, {insert_data[7]}, '{insert_data[8]}', {insert_data[9]}, {insert_data[10]}, {insert_data[11]}, {insert_data[12]}, {insert_data[13]}, {insert_data[14]}, {insert_data[15]}, {insert_data[16]}, {insert_data[17]}, {insert_data[18]}, '{insert_data[19]}')'''
+                # # query = '''CALL gts_put({}, {}, {}, {}, '{}', {}, {}, {}, '{}', {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, '{}')'''.format(
+                # #     insert_data[0], insert_data[1], insert_data[2], insert_data[3], insert_data[4], insert_data[5], insert_data[6], insert_data[7], insert_data[8], insert_data[9], insert_data[10], insert_data[11], insert_data[12], insert_data[13], insert_data[14], insert_data[15], insert_data[16], insert_data[17], insert_data[18], insert_data[19]
+                # # )
+                # # params = (insert_data[0], insert_data[1], insert_data[2], insert_data[3], f"{insert_data[4]}",
+                # #           insert_data[5], insert_data[6], insert_data[7], f"{insert_data[8]}",
+                # #           insert_data[9], insert_data[10], insert_data[11], insert_data[12], insert_data[13],
+                # #           insert_data[14], insert_data[15], insert_data[16], insert_data[17], insert_data[18],
+                # #           f"{insert_data[19]}")
+                # print(1)
+                # Packet_data.cursor.execute(query)
+                # Packet_data.db_connection.commit()
+                # print(2)
 
+
+                # print(Packet_data.cursor.fetchall())
+
+                # Рабочий но не пишется в бд
+                # params = (insert_data[0], insert_data[1], insert_data[2], insert_data[3], f"{insert_data[4]}",
+                #           insert_data[5], insert_data[6], insert_data[7], f"{insert_data[8]}",
+                #           insert_data[9], insert_data[10], insert_data[11], insert_data[12], insert_data[13],
+                #           insert_data[14], insert_data[15], insert_data[16], insert_data[17], insert_data[18],
+                #           f"{insert_data[19]}")
+                print(1)
+                Packet_data.cursor.callproc("gts_put", (insert_data[0], insert_data[1], insert_data[2], insert_data[3],
+                                            insert_data[4], insert_data[5], insert_data[6], insert_data[7],
+                                            insert_data[8], insert_data[9], insert_data[10], insert_data[11],
+                                            insert_data[12], insert_data[13], insert_data[14], insert_data[15],
+                                            insert_data[16], insert_data[17], insert_data[18], insert_data[19]))
+                Packet_data.db_connection.commit()
+                print(2)
+            else:
+                self.insert_sqlite3(insert_data)
+
+
+
+            # query = f"CALL gts_put({insert_data[0]}, {insert_data[1]}, {insert_data[2]}, {insert_data[3]}, " \
+            #         f"'{insert_data[4]}', {insert_data[5]}, {insert_data[6]}, {insert_data[7]}, '{insert_data[8]}', " \
+            #         f"{insert_data[9]}, {insert_data[10]}, {insert_data[11]}, {insert_data[12]}, {insert_data[13]}, " \
+            #         f"{insert_data[14]}, {insert_data[15]}, {insert_data[16]}, {insert_data[17]}, {insert_data[18]}, " \
+            #         f"'{insert_data[19]}')"
+            # #         это датетайМ
             return True
 
-        except Exception as e:
+        # except Exception as e:
             print(e)
-            # Packet_data.cursor.close()
-            # Packet_data.db_connection.close()
+        #     # Packet_data.cursor.close()
+        #     # Packet_data.db_connection.close()
             return False
 
     # Метод вставки данных в бд.
@@ -161,9 +225,6 @@ class Packet_data:
         # Если колво значений меньше 4, то заполняем -1.
         while len(self.llsd) < 4:
             self.llsd.append(-1)
-
-        # пока так, надо потом будет удалить и добавить изменение этого значения.
-        self.sensors = "12341qwerqwfdasf"
 
         # Запись в удаленную бд.
         if Packet_data.is_main:

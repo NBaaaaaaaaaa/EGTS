@@ -1,5 +1,5 @@
 import mysql.connector
-from config import host, user, password, db_name, table_name
+from config import host, port, user, password, db_name, table_name
 
 
 # Процедура создания таблицы.
@@ -51,8 +51,10 @@ if __name__ == "__main__":
     # Подключаемся к серверу.
     db_connection = mysql.connector.connect(
         host=host,
+        port=port,
         user=user,
-        password=password
+        password=password,
+        ssl_disabled=True
     )
 
     # Создаем курсор.

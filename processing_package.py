@@ -12,6 +12,7 @@ from processing_subrecords.processing_srd_AUTH import pr_EGTS_AUTH_SERVICE
 from processing_subrecords.processing_srd_TELEDATA import pr_EGTS_TELEDATA_SERVICE
 
 from logger_files.type_text import Types_text
+import time
 
 
 # Функция получения данных пакета.
@@ -153,9 +154,11 @@ def processing_subrecord(rids, data_for_db):
 
             case Types_services.EGTS_TELEDATA_SERVICE.value:
                 all_srds_srd = pr_EGTS_TELEDATA_SERVICE(srds, data_for_db)
-
+                a = time.time()
                 # Запись данных в бд.
                 data_for_db.gts_put()
+                b = time.time()
+                print(f"  Запись точки: {round(b - a, 2)} секунд")
                 # Очищаем список значений llsd.
                 data_for_db.reset_llsd()
 

@@ -14,7 +14,7 @@ def create_EGTS_PT_RESPONSE(rpid, pr):
 
 # Функция создания ответного пакета. Пока None второй аргумент, позже будет нужен.
 def create_response_package(dict_data, package_type, code):
-    print(f"Пакет с кодом {code}")
+    # print(f"Пакет с кодом {code}")
     send_package = b''
     for param in list(dict_data.keys()):
         if param in ("PRF", "RTE", "ENA", "CMP", "PR", "SFRD", "SFRCS"):

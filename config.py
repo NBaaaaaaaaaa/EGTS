@@ -1,12 +1,13 @@
 # ---------------- database configuration ----------------
 # All
-table_name = "egts_data"
+table_name = ""
 
 # MySQL
-host = "localhost"
-user = "NIMB"
-password = "root"
-db_name = "egts_db"
+host = ""
+port = None
+user = ""
+password = ""
+db_name = ""
 
 # SQLite
 l_db_name = "local_egts_db"

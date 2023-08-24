@@ -1,4 +1,4 @@
-import multiprocessing
+# import multiprocessing
 import socket
 from processing_package import package_data_processing
 from threading import Thread
@@ -9,6 +9,7 @@ from logger_files.logger import Logging
 from logger_files.type_text import Types_text
 
 from config import queue_length, devices_count
+from datetime import datetime
 
 
 # Процедура получения и отправки пакетов.
@@ -21,11 +22,13 @@ def receive_data(connection, data_for_db, logging):
             if not data:
                 break
 
-            print("Получены данные:", data)
+            # print("Получены данные:", data)
+            print(f"Пакет получен: {datetime.now().time().strftime('%H:%M:%S')} - {data}")
             logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=data)
 
             packet = package_data_processing(data, data_for_db, logging)
             connection.send(packet)
+            print(f"Отправлен пакет на пакет: {datetime.now().time().strftime('%H:%M:%S')}")
             logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
 
     except KeyboardInterrupt:
@@ -36,26 +39,6 @@ def receive_data(connection, data_for_db, logging):
     connection.close()
 
 
-# Процедура работы процесса.
-def process_work(server_socket):
-    for i in range(devices_count):
-        # Принимаем входящее соединение
-        connection, address = server_socket.accept()
-        print("Установлено соединение с {}".format(address))
-
-        # Создаем объект класса, для последующей записи данных в бд.
-        data_for_db = Packet_data()
-
-        logging = Logging(address)
-        logging.logging(fromm=1, to=2, type_text=Types_text.CONNECTED.value)
-
-        # Создаем новый поток для обработки данных клиента
-        t = Thread(target=receive_data, args=(connection, data_for_db, logging))
-        t.start()
-
-    return True
-
-
 # Процедура работы сервера.
 def server_work():
     # Создаем подключение к бд.
@@ -63,7 +46,7 @@ def server_work():
     create_cursor(db_connection)
 
     # Создаем поток проверки доступа сервера с бд.
-    create_check_connect()
+    # create_check_connect()
 
     port = 1337
 
@@ -74,23 +57,26 @@ def server_work():
 
     print("Сервер запущен и слушает порт {}...".format(port))
 
-    # Создаем пул процессов без указания количества процессов
-    pool = multiprocessing.Pool()
-    is_create_proc = True
-
     try:
         while True:
-            if is_create_proc:
-                is_create_proc = False
+            if Packet_data.get_count() < devices_count:
+                # Принимаем входящее соединение
+                connection, address = server_socket.accept()
+                print("Установлено соединение с {}".format(address))
 
-                is_create_proc = pool.apply_async(process_work, args=(server_socket,))
+                # Создаем объект класса, для последующей записи данных в бд.
+                data_for_db = Packet_data()
 
-    except KeyboardInterrupt:
-        pass
+                logging = Logging(address)
+                logging.logging(fromm=1, to=2, type_text=Types_text.CONNECTED.value)
 
-    # Завершаем пул процессов
-    pool.close()
-    pool.join()
+                # Создаем новый поток для обработки данных клиента
+                t = Thread(target=receive_data, args=(connection, data_for_db, logging))
+                t.start()
+
+    except Exception as e:
+        print(e)
+
     # Закрываем соединение с бд.
     Packet_data.db_connection.close()
     # Закрываем сокет.
@@ -128,15 +114,24 @@ if __name__ == "__main__":
     # logging.logging(fromm=1, to=2, type_text=Types_text.CONNECTED.value)
     #
     # logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=a[0])
+    # print(f"Первый пакет получен: {datetime.now().time().strftime('%H:%M:%S')}")
     # packet = package_data_processing(a[0], data_for_db, logging)
+    # print(f"Отправлен пакет на пакет 1: {datetime.now().time().strftime('%H:%M:%S')}")
     # logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
     #
+    # logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=b[0])
+    # print(f"Второй пакет получен: {datetime.now().time().strftime('%H:%M:%S')}")
+    # packet = package_data_processing(b[0], data_for_db, logging)
+    # print(f"Отправлен пакет на пакет 2: {datetime.now().time().strftime('%H:%M:%S')}")
+    # logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
+
+
     # while True:
     #     logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=b[0])
     #     packet = package_data_processing(b[0], data_for_db, logging)
     #     logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
-    #
-    # Packet_data.db_connection.close()
+
+    Packet_data.db_connection.close()
 
     # for i in a:
     #     package_data_processing(i)
