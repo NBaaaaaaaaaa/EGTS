@@ -106,32 +106,23 @@ if __name__ == "__main__":
     # create_cursor(db_connection)
     #
     # # Создаем поток проверки доступа сервера с бд.
-    # create_check_connect()
+    # # create_check_connect()
     #
     # data_for_db = Packet_data()
     #
     # logging = Logging('address')
     # logging.logging(fromm=1, to=2, type_text=Types_text.CONNECTED.value)
     #
-    # logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=a[0])
-    # print(f"Первый пакет получен: {datetime.now().time().strftime('%H:%M:%S')}")
     # packet = package_data_processing(a[0], data_for_db, logging)
-    # print(f"Отправлен пакет на пакет 1: {datetime.now().time().strftime('%H:%M:%S')}")
-    # logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
+    # packet = package_data_processing(b[1], data_for_db, logging)
     #
-    # logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=b[0])
-    # print(f"Второй пакет получен: {datetime.now().time().strftime('%H:%M:%S')}")
-    # packet = package_data_processing(b[0], data_for_db, logging)
-    # print(f"Отправлен пакет на пакет 2: {datetime.now().time().strftime('%H:%M:%S')}")
-    # logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
-
 
     # while True:
     #     logging.logging(fromm=1, to=2, type_text=Types_text.SENT_DATA.value, text=b[0])
     #     packet = package_data_processing(b[0], data_for_db, logging)
     #     logging.logging(fromm=2, to=1, type_text=Types_text.SENT_DATA.value, text=packet)
 
-    Packet_data.db_connection.close()
+    # Packet_data.db_connection.close()
 
     # for i in a:
     #     package_data_processing(i)

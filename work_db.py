@@ -71,6 +71,30 @@ def create_check_connect():
     t.start()
 
 
+# Процедура записи данных в локальную бд. По итогу можно сделать из этого процедуру в самой бд и избавиться от
+# такого большого блока кода.
+def insert_sqlite3(insert_data):
+    try:
+        type_placeholder = {
+            True: "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
+            False: "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?"
+        }
+
+        insert_query = f'''
+        INSERT INTO {table_name}
+          (imei, terminal_id, rec_id, event_id, time_recv,
+          time_event, lat, lon, coords_sign, speed, vector, height, is_valid,
+          is_blackbox, point_source, fuel_level_1, fuel_level_2, fuel_level_3, fuel_level_4, sensors)
+        VALUES ({type_placeholder[Packet_data.is_main]})
+        '''
+
+        Packet_data.cursor.execute(insert_query, insert_data)
+        Packet_data.db_connection.commit()
+
+    except Exception as e:
+        print(e)
+
+
 class Packet_data:
     tid = oid = evid = tm = lat = long = spd = dir = alt = vld = bb = src = 0
     imei = coords = sensors = ''
@@ -135,33 +159,12 @@ class Packet_data:
     def reset_llsd(self):
         self.llsd = []
 
-    def insert_sqlite3(self, insert_data):
-        try:
-            type_placeholder = {
-                True: "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
-                False: "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?"
-            }
-
-            insert_query = f'''
-            INSERT INTO {table_name}
-              (imei, terminal_id, rec_id, event_id, time_recv,
-              time_event, lat, lon, coords_sign, speed, vector, height, is_valid,
-              is_blackbox, point_source, fuel_level_1, fuel_level_2, fuel_level_3, fuel_level_4, sensors)
-            VALUES ({type_placeholder[Packet_data.is_main]})
-            '''
-
-            Packet_data.cursor.execute(insert_query, insert_data)
-            Packet_data.db_connection.commit()
-
-        except Exception as e:
-            print(e)
-
     # Метод записи данных в бд.
     def insert_data(self, data=None):
-        # try:
+        try:
             # Вставка в бд.
             if not data:
-                insert_data = [self.imei, self.tid, self.oid, self.evid, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                insert_data = [self.imei, self.tid, self.oid, self.evid, datetime.now(),
                                self.tm, self.lat, self.long, self.coords, self.spd, self.dir, self.alt, self.vld,
                                self.bb, self.src, self.llsd[0], self.llsd[1], self.llsd[2], self.llsd[3], self.sensors]
 
@@ -170,51 +173,15 @@ class Packet_data:
                 insert_data = data
 
             if Packet_data.is_main:
-                # query = f'''CALL gts_put({insert_data[0]}, {insert_data[1]}, {insert_data[2]}, {insert_data[3]}, '{insert_data[4]}', {insert_data[5]}, {insert_data[6]}, {insert_data[7]}, '{insert_data[8]}', {insert_data[9]}, {insert_data[10]}, {insert_data[11]}, {insert_data[12]}, {insert_data[13]}, {insert_data[14]}, {insert_data[15]}, {insert_data[16]}, {insert_data[17]}, {insert_data[18]}, '{insert_data[19]}')'''
-                # # query = '''CALL gts_put({}, {}, {}, {}, '{}', {}, {}, {}, '{}', {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, '{}')'''.format(
-                # #     insert_data[0], insert_data[1], insert_data[2], insert_data[3], insert_data[4], insert_data[5], insert_data[6], insert_data[7], insert_data[8], insert_data[9], insert_data[10], insert_data[11], insert_data[12], insert_data[13], insert_data[14], insert_data[15], insert_data[16], insert_data[17], insert_data[18], insert_data[19]
-                # # )
-                # # params = (insert_data[0], insert_data[1], insert_data[2], insert_data[3], f"{insert_data[4]}",
-                # #           insert_data[5], insert_data[6], insert_data[7], f"{insert_data[8]}",
-                # #           insert_data[9], insert_data[10], insert_data[11], insert_data[12], insert_data[13],
-                # #           insert_data[14], insert_data[15], insert_data[16], insert_data[17], insert_data[18],
-                # #           f"{insert_data[19]}")
-                # print(1)
-                # Packet_data.cursor.execute(query)
-                # Packet_data.db_connection.commit()
-                # print(2)
-
-
-                # print(Packet_data.cursor.fetchall())
-
-                # Рабочий но не пишется в бд
-                # params = (insert_data[0], insert_data[1], insert_data[2], insert_data[3], f"{insert_data[4]}",
-                #           insert_data[5], insert_data[6], insert_data[7], f"{insert_data[8]}",
-                #           insert_data[9], insert_data[10], insert_data[11], insert_data[12], insert_data[13],
-                #           insert_data[14], insert_data[15], insert_data[16], insert_data[17], insert_data[18],
-                #           f"{insert_data[19]}")
-                print(1)
-                Packet_data.cursor.callproc("gts_put", (insert_data[0], insert_data[1], insert_data[2], insert_data[3],
-                                            insert_data[4], insert_data[5], insert_data[6], insert_data[7],
-                                            insert_data[8], insert_data[9], insert_data[10], insert_data[11],
-                                            insert_data[12], insert_data[13], insert_data[14], insert_data[15],
-                                            insert_data[16], insert_data[17], insert_data[18], insert_data[19]))
+                Packet_data.cursor.callproc("gts_put", insert_data)
                 Packet_data.db_connection.commit()
-                print(2)
+
             else:
-                self.insert_sqlite3(insert_data)
+                insert_sqlite3(insert_data)
 
-
-
-            # query = f"CALL gts_put({insert_data[0]}, {insert_data[1]}, {insert_data[2]}, {insert_data[3]}, " \
-            #         f"'{insert_data[4]}', {insert_data[5]}, {insert_data[6]}, {insert_data[7]}, '{insert_data[8]}', " \
-            #         f"{insert_data[9]}, {insert_data[10]}, {insert_data[11]}, {insert_data[12]}, {insert_data[13]}, " \
-            #         f"{insert_data[14]}, {insert_data[15]}, {insert_data[16]}, {insert_data[17]}, {insert_data[18]}, " \
-            #         f"'{insert_data[19]}')"
-            # #         это датетайМ
             return True
 
-        # except Exception as e:
+        except Exception as e:
             print(e)
         #     # Packet_data.cursor.close()
         #     # Packet_data.db_connection.close()
@@ -224,7 +191,7 @@ class Packet_data:
     def gts_put(self):
         # Если колво значений меньше 4, то заполняем -1.
         while len(self.llsd) < 4:
-            self.llsd.append(-1)
+            self.llsd.append(0)
 
         # Запись в удаленную бд.
         if Packet_data.is_main:
